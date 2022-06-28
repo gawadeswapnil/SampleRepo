@@ -1,11 +1,5 @@
-FROM node:14
+FROM nginx:1.17.1-alpine
 
-WORKDIR /usr/src/app
+COPY nginx.conf /etc/nginx/nginx.conf
 
-COPY package.json .
-
-RUN npm install 
-
-COPY . .
-
-EXPOSE 3000
+COPY ./dist/aston-villa-app /usr/share/nginx/html
