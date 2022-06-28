@@ -1,24 +1,16 @@
 # This is a basic workflow to help you get started with Actions
 
-name: NodeJs App
+name: Sample-app
 
 # Controls when the workflow will run
 on:
   # Triggers the workflow on push or pull request events but only for the master branch
  push:
    branches: [ master ]
-   
-env:
-  AWS_REGION: ap-south-1
-  ECR_REPOSITORY: demo-registry
-  ECS_SERVICE: sample-app-service
-  ECS_CLUSTER: defaulte
-  ECS_TASK_DEFINITION: .aws/task-definition.json
-  CONTAINER_NAME: sample_app
 
 jobs:
 
- NodeBuild:
+ Build:
 
     runs-on: ubuntu-latest
 
@@ -34,39 +26,26 @@ jobs:
           node-version: ${{ matrix.node-version }}
       - run: npm ci
       - run: npm install
+      - run: npm run build
       
- DockerBuild:
-  
-   name: Build Image
-   runs-on: ubuntu-latest
-   needs: NodeBuild
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
-   steps:
-   
-    - name: Check out code
-      uses: actions/checkout@v2  
-      
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_REGION }}
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
 
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v1
-
-    - name: Build, tag, and push image to Amazon ECR
-      id: build-image
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: ${{env.ECR_REPOSITORY}}
-        IMAGE_TAG:  ${{ github.sha }}
-      run: |
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-        echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-
-      
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{env.ECR_REPOSITORY}}
+          IMAGE_TAG:  ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
