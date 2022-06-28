@@ -12,7 +12,7 @@ jobs:
 
  NodeBuild:
 
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     strategy:
       matrix:
